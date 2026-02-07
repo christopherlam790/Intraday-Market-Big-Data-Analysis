@@ -1,0 +1,14 @@
+#Data
+*.parquet
+*.csv
+
+# Kaggle
+.kaggle/
+.cache/kagglehub/
+
+# Python
+__pycache__/
+.ipynb_checkpoints/
+
+# Env
+.env
