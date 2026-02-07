@@ -45,3 +45,14 @@ intraday-market-data-platform/
 ├── README.md
 ├── requirements.txt
 └── Makefile # one-command runs
+
+# Plan
+
+- Cache kaggle data
+  - ingestion -> kaggle_ingest.py
+  - path with version described in .env
+
+# Error & Implementation notes
+
+- Single file in Kaggle dataset not named correctly; Expliit renaming
+  - .../TOS Kaggle data week ending 2024 09 013csv.csv -> .../TOS Kaggle data week ending 2024 09 13.csv
