@@ -1,4 +1,4 @@
-# Intraday-Market-Big-Data-Analysis
+# Intraday-Market-Big-Data-Warehouse
 
 Big Data Analysis of Intraday Markets, from 01/26/2020 - 02/06/2026
 
