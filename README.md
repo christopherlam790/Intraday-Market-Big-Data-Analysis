@@ -54,5 +54,17 @@ intraday-market-data-platform/
 
 # Error & Implementation notes
 
-- Single file in Kaggle dataset not named correctly; Expliit renaming
+- Single file in Kaggle dataset not named correctly; Explicit renaming
   - .../TOS Kaggle data week ending 2024 09 013csv.csv -> .../TOS Kaggle data week ending 2024 09 13.csv
+
+## Schema Issue 1
+
+Schema issue 1 refers to column headers containing actual data values instead of field names. Solution is to preserve the misplaced data as the first row and applied correct headers in accordence to prior schemas
+
+The following parquets belong to schema issue 1:
+
+- TOS Kaggle data week ending 2021 01 01.parquet
+- TOS Kaggle data week ending 2021 01 08.parquet
+- TOS Kaggle data week ending 2021 01 15.parquet
+- TOS Kaggle data week ending 2025 12 26.parquet
+- TOS Kaggle data week ending 2026 02 06.parquet
