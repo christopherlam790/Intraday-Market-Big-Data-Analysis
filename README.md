@@ -68,3 +68,11 @@ The following parquets belong to schema issue 1:
 - TOS Kaggle data week ending 2021 01 15.parquet
 - TOS Kaggle data week ending 2025 12 26.parquet
 - TOS Kaggle data week ending 2026 02 06.parquet
+
+## Schema Issue 2
+
+Shcema issue 2 refers to a tab seperated value (.tsv) file saved under a comma seperated value (.csv) file. Solution is to convert the parquet that assumed .csv convention into a parqet that works for .tsv
+
+The following parquets belong to schema issue 2:
+
+- TOS Kaggle data week ending 2025 08 08.parquet
