@@ -21,4 +21,4 @@ def main(parquete_path: str) -> None:
 
 
 if __name__ == "__main__":
-    main("data/bronze/intraday_prices/TOS Kaggle data example.parquet")
+    main("data/silver/intraday_prices/TOS Kaggle data week ending 2000 12 12_cleaning.parquet")
