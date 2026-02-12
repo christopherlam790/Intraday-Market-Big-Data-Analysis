@@ -87,10 +87,10 @@ def main(folder_path:str):
     # Itterate through each bronze parquet
     for parquet in sorted_parquet_paths:
 
+        print(f"Analyzing parquet {parquet}")
+
         df = pd.read_parquet(parquet)
-        
-        
-        
+          
         # ------------------------
         # Verify necassary cols existence ['ID', 'TimeStamp', '/ES', '/NQ', '/RTY', 'SPY', 'QQQ', 'IWM'] 
         # ------------------------
@@ -217,11 +217,16 @@ def main(folder_path:str):
         """ 
         def clean_cols_for_type(df: pd.DataFrame) -> pd.DataFrame:
         
-        
+            confoming_flag = True
 
+            # Temporary convert all types to string to avoid parquet writing errs
+            for col in df.columns:
+                df[col] = df[col].astype(str)
+
+
+
+            # Verify col types
             for col in VALID_COLS:
-            
-                confoming_flag = True
             
                 col_type = df[col].dtype
             
@@ -254,26 +259,6 @@ def main(folder_path:str):
                         df[col] = df[col].astype("float64")
                         
 
-                if confoming_flag:
-                    metadata.append(add_clean_metadata_instance(file=parquet,
-                                                            layer= "silver",
-                                                            process= "cleaning",
-                                                            sub_process= "col_type",
-                                                            status= "conforming",
-                                                            issue= "N/A",
-                                                            action="processed",
-                                                            notes="N/A"))
-                else:
-                   metadata.append(add_clean_metadata_instance(file=parquet,
-                                                            layer= "silver",
-                                                            process= "cleaning",
-                                                            sub_process= "col_type",
-                                                            status= "non_conforming",
-                                                            issue= "silve_cleaning_col_3",
-                                                            action="adjusted",
-                                                            notes="Convert col types")) 
-
-
                 # Reverify cols; Error if fails 
                 
                 col_type = df[col].dtype
@@ -290,15 +275,50 @@ def main(folder_path:str):
                 
                 except:
                     raise Exception(f"An error has occured with col typing in parquet {parquet}")
+                
+                
+            # Add metadata for status
+            if confoming_flag:
+                metadata.append(add_clean_metadata_instance(file=parquet,
+                                                        layer= "silver",
+                                                        process= "cleaning",
+                                                        sub_process= "col_type",
+                                                        status= "conforming",
+                                                        issue= "N/A",
+                                                        action="processed",
+                                                        notes="N/A"))
+            else:
+                metadata.append(add_clean_metadata_instance(file=parquet,
+                                                        layer= "silver",
+                                                        process= "cleaning",
+                                                        sub_process= "col_type",
+                                                        status= "non_conforming",
+                                                        issue= "silver_cleaning_col_3",
+                                                        action="adjusted",
+                                                        notes="Convert col types")) 
             
             return df
             
                             
         df = clean_cols_for_type(df=df)
         
-        print(df.head())
+        # --------------
+        # Write prquets to folder
+        # --------------
+        dataset_name = Path(parquet).stem        
+
+        if not os.path.isfile(f"{SILVER_ROOT}/{dataset_name}_cleaning.parquet"):
+            print("Adding file")
+        
+            df.to_parquet(f"{SILVER_ROOT}/{dataset_name}_cleaning.parquet", engine="pyarrow")
         
         
+        
+        
+
+    # -----------------
+    # Write metadata
+    # -----------------
 
     ensure_dir(SILVER_META)
 
