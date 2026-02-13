@@ -1,17 +1,18 @@
-#Data
+# ----- Data ------
 *.parquet
-*.csv
-*.json
+data/
+
+# ------ System ------
 *.DS_Store
 
 
-# Kaggle
+# ----- Kaggle ------
 .kaggle/
 .cache/kagglehub/
 
-# Python
+# ----- Python ------
 __pycache__/
 .ipynb_checkpoints/
 
-# Env
+# ----- Env ------
 .env
