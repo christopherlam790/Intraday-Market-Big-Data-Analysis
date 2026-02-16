@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 import pyarrow as pq
 import json
+import polars as pl
+from datetime import datetime
 
 
 import sys
@@ -23,8 +25,8 @@ import add_metadata
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SILVER_ROOT = PROJECT_ROOT / "data" / "silver" / "intraday_prices"
-SILVER_META = PROJECT_ROOT / "data" / "silver" / "metadata"
+SILVER_ROOT = PROJECT_ROOT / "data" / "silver" / "normalize"
+SILVER_META = PROJECT_ROOT / "data" / "silver" / "normalize_metadata"
 
 
 VALID_COLS = ['ID', 'TimeStamp', '/ES', '/NQ', '/RTY', 'SPY', 'QQQ', 'IWM']
@@ -66,22 +68,115 @@ def list_files_alphabetically(folder_path: Path, substring:str = "") -> list[Pat
     return sorted(paths)
 
 
-def main(folder_path:str):
+def main(folder_path:str, substring: str = ""):
         
-    sorted_parquet_paths = list_files_alphabetically(folder_path=folder_path, substring="2025")
+    sorted_parquet_paths = list_files_alphabetically(folder_path=folder_path, substring=substring)
 
     ensure_dir(SILVER_ROOT)
-    
-    
-    metadata = []
-    
-    
-    
-    # Itterate through each bronze parquet
+
     for parquet in sorted_parquet_paths:
         
-        print(parquet)
+        df = pd.read_parquet(parquet)
+        
+        df = df[VALID_COLS]
         
         
+        # --------------
+        # Write parquets to folder w/ only necassary cols
+        # --------------
+        dataset_name = Path(parquet).stem   
+        
+        dataset_name = dataset_name.replace("_cleaning", "_normalized")
+        
+        if not os.path.isfile(f"{SILVER_ROOT}/{dataset_name}.parquet"):
+            print(f"Adding parquet {parquet}")
+        
+            df.to_parquet(f"{SILVER_ROOT}/{dataset_name}.parquet", engine="pyarrow")
+        
+        
+    # ---------------------
+    # Switch to polars for efficiency, now that cols are normalized
+    # ----------------------
+    
+    lazy_df = (
+        pl.scan_parquet(SILVER_ROOT)
+        .select(VALID_COLS)
+    )
+
+    df = lazy_df.collect()
+
+
+
+    # -------------
+    # Validate types
+    # -------------
+
+    for i in VALID_COLS:
+        try:
+            if i == "ID":
+                assert(str(df[i].dtype) == "Int64")
+            elif i == "TimeStamp":
+                assert(str(df[i].dtype) == "String")
+            else:
+                assert(str(df[i].dtype) == "Float64")
+        except:
+            raise Exception("Error in data types in silver normalization")
+       
+       
+
+    # -----------
+    # Standardize timestamps
+    # -----------
+
+    # Define the regex patterns for the two 'messy' formats
+    pattern_short = r"^\d{1,2}/\d{1,2}/\d{2} \d{2}:\d{2}$"            # 8/9/20 17:59
+    pattern_medium = r"^\d{1,2}/\d{1,2}/\d{4} \d{2}:\d{2}:\d{2}$"    # 11/22/2022 18:45:39
+
+    df_standardized = df.with_columns(
+        pl.when(pl.col("TimeStamp").str.contains(pattern_short))
+        .then(
+            # Convert 8/9/20 17:59 -> 2020-08-09 17:59:00.000
+            pl.col("TimeStamp").str.to_datetime("%m/%d/%y %H:%M", strict=False)
+        )
+        .when(pl.col("TimeStamp").str.contains(pattern_medium))
+        .then(
+            # Convert 11/22/2022 18:45:39 -> 2022-11-22 18:45:39.000
+            pl.col("TimeStamp").str.to_datetime("%m/%d/%Y %H:%M:%S", strict=False)
+        )
+        .otherwise(
+            # Keep the already 'correct' ones or parse them directly
+            pl.col("TimeStamp").str.to_datetime("%Y-%m-%d %H:%M:%S%.3f", strict=False)
+        )
+        .dt.strftime("%Y-%m-%d %H:%M:%S.000") # Force back to your regex-conformant string
+        .alias("TimeStamp")
+    )
+            
+
+    # The 'Gold Standard' pattern: YYYY-MM-DD HH:MM:SS.mmm
+    target_regex = r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$"
+
+    # Filter for anything that STILL doesn't match
+    remaining_issues = df_standardized.filter(
+        ~pl.col("TimeStamp").str.contains(target_regex)
+    )
+
+    print(f"Remaining non-conforming rows: {remaining_issues.height}")
+
+    if remaining_issues.height > 0:
+        print("Sample of stubborn rows:")
+        print(remaining_issues.select("TimeStamp").unique().head(5))
+        
+        raise Exception("TimeStamp conformity issue")
+
+        
+    
+        
+        
+    
+
+
+       
+
+    
 if __name__ == "__main__":
-    main(folder_path="data/silver/intraday_prices")
+    main(folder_path="data/silver/cleaning")
